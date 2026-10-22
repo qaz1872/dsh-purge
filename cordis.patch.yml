@@ -28,7 +28,10 @@
   config:
     includeHarnessIdentity: false
     personaPrefix: ""
-    personaSuffix: Your working directory is {{cwd}}.
+    # 0.2.1-rc.2 的 interpolate() 对未知变量抛错，而新构建只注册 provider/model，
+    # {{cwd}} 会让 prompt 组装直接失败（表现为每轮 "本轮运行失败"）。
+    # 工作目录改由 runtime context 段落承载，这里只留静态句。
+    personaSuffix: Your working directory is provided in the runtime context.
 
 - id: dsh-purge
   inject: [systemPrompt, tools]

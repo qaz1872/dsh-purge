@@ -1,3 +1,36 @@
+# 1.2.0
+
+## 中文
+
+- 版本 **1.2.0**，目标宿主 **0.2.1-rc.2**（`dshTarget` 同步更新）。
+- 修 `{{cwd}}` 死锁：0.2.1 的 `interpolate()` 对未知变量抛错，而新构建只注册 `provider` / `model`。
+  `cordis.patch.yml` 的 `personaSuffix` 改成静态句，工作目录改由 runtime context 承载 —— 之前表现为每轮「本轮运行失败」。
+- #32 / #53：Web 面文案 0.2.1 已从 `dsh-web-app` 搬到 `dsh-harness-dev-context`，且拆成 `prefix` / `suffix`。
+  `targetFiles()` 新增 `harness-dev-context` 槽，两条补丁按新形态重写锚点，旧版本锚点保留。
+- #40：`assemble()` 尾部新增 `requiredContexts`，`contexts` 改为按 required 过滤。新增一条 0.2.1 专用锚点，
+  complete 模式下仍保留 `dsh-purge` 分节，且不丢 required 上下文。
+- 新增审计工具：`scripts/asar-probe.mjs`（直接读 app.asar 文件表，不解包）、
+  `scripts/extract-asar-subset.mjs`（按前缀抽子树）、`scripts/audit-anchors.mjs`（区分 apply / cleanup 两向，给出真失配清单）。
+  `npm run audit:anchors -- <AI_BASE>` 一条命令出报告。
+- 0.2.1-rc.2 实测：82 条补丁 `applied=59 already=6 missing_file=10 skipped=2 na=5`，无 failed；改动 49 个文件，新增 0。
+- 说明文档：`docs/compat-0.2.1.md`。
+
+## English
+
+- **1.2.0**, targeting host **0.2.1-rc.2** (`dshTarget` bumped).
+- Fix the `{{cwd}}` deadlock: 0.2.1 `interpolate()` throws on unknown variables and the build only registers
+  `provider` / `model`. `personaSuffix` in `cordis.patch.yml` is now a static sentence; the working directory
+  travels in the runtime context. Previously every turn ended in "run failed".
+- #32 / #53: the Web-surface prose moved from `dsh-web-app` to `dsh-harness-dev-context` and was split into
+  `prefix` / `suffix`. New `harness-dev-context` slot in `targetFiles()`, new anchors alongside the old ones.
+- #40: `assemble()` gained `requiredContexts` and filters `contexts` by requirement. Added a 0.2.1 anchor that
+  keeps the `dsh-purge` sections in complete mode without dropping required contexts.
+- New audit tooling: `scripts/asar-probe.mjs` (reads the asar header, no unpack), `scripts/extract-asar-subset.mjs`,
+  and `scripts/audit-anchors.mjs` (apply vs cleanup verdicts plus a real-miss list). `npm run audit:anchors -- <AI_BASE>`.
+- Measured on 0.2.1-rc.2: 82 patches → `applied=59 already=6 missing_file=10 skipped=2 na=5`, no failures;
+  49 files touched, 0 added.
+- Details: `docs/compat-0.2.1.md`.
+
 # 1.1.71
 
 ## 中文

@@ -1,3 +1,68 @@
+# 1.2.3
+
+## 中文
+
+- 版本 **1.2.3**。
+- 新增 `scripts/unseal-desktop.cmd`：桌面版解包后必须让 `app.asar` 让位（Electron 优先读 asar），
+  脚本会结束宿主进程、移除/改名 `app.asar`、再带 `NODE_EXTRA_CA_CERTS` 启动。用法见 `docs/compat-0.2.1.md`。
+- `docs/compat-0.2.1.md` 补「部署与让位」章节：解包目录必须配 asar 让位才生效，官方升级后 asar 会重新封包，
+  需要再跑一次；附校验与回滚命令。
+
+## English
+
+- **1.2.3**.
+- Adds `scripts/unseal-desktop.cmd`: after unpacking the desktop app, `app.asar` must step aside because Electron
+  prefers the archive. The script kills the host, removes/renames `app.asar`, then relaunches with
+  `NODE_EXTRA_CA_CERTS`. See `docs/compat-0.2.1.md`.
+- `docs/compat-0.2.1.md` gains a deployment section: the unpacked tree only takes effect once the archive is out of
+  the way, official updates re-seal it, and verification plus rollback commands are included.
+
+# 1.2.2
+
+## 中文
+
+- 版本 **1.2.2**。
+- 新增 **#89 `DROP_MID_CONVERSATION_TOOL_CHANGES`**：`dsh-llm-deepseek` 的 serialize 里，developer 消息的
+  `tool-addition` / `tool-removal` 直接返回 `[]`，不再生成 `tool_addition` / `tool_removal` 增量块。
+- 修 `messages.NNN: 'tool_addition' blocks can only be in 'system' messages`（INVALID_REQUEST）：
+  启用/禁用任何带工具的插件都会让工具集变化，DSH 随即插一条 developer 消息带增量块，
+  服务端只接受 system 位置的增量块，长会话从第二条起必然失败。
+- `tools` 本来每轮全量声明，丢掉增量提示不改变模型可见工具集。
+- 实测：对 0.2.1-rc.2 源码应用后 `-207` 字节，替换点 `node --check` 通过，`type: "tool_addition"` 归零。
+
+## English
+
+- **1.2.2**.
+- New **#89 `DROP_MID_CONVERSATION_TOOL_CHANGES`**: `serialize` in `dsh-llm-deepseek` now returns `[]` for the
+  developer `tool-addition` / `tool-removal` branches, so no incremental `tool_addition` / `tool_removal` blocks are
+  emitted.
+- Fixes `messages.NNN: 'tool_addition' blocks can only be in 'system' messages` (INVALID_REQUEST): enabling or
+  disabling any tool-bearing plugin changes the tool set, DSH then emits a developer message with incremental
+  blocks, and the server only accepts them in a system position — long sessions fail from the second occurrence on.
+- `tools` are declared in full on every request, so dropping the incremental hint does not change what the model sees.
+- Measured on 0.2.1-rc.2: `-207` bytes after applying, `node --check` passes, `type: "tool_addition"` count is zero.
+
+# 1.2.1
+
+## 中文
+
+- 版本 **1.2.1**。
+- 修运行时写入路径的 `{{cwd}}`：`identity.js` 的 `overlayOfficialIdentity()` 会把 `deployment:persona-suffix`
+  段改写成 `CWD_ONLY_SUFFIX`，旧值是 `Your working directory is {{cwd}}.`，0.2.1 组装直接抛
+  `unknown prompt variable "{{cwd}}"`。改为静态句，旧值保留在 `LEGACY_CWD_ONLY_SUFFIX` 里只做状态识别。
+- 同步修 `stripHarnessPersona()` 两处 replace 目标、`ALLOW_EXEC_PERSONA_BLOCK/LINE`、
+  `isDisposableYamlFoldParagraph()`。
+
+## English
+
+- **1.2.1**.
+- Fixes the runtime `{{cwd}}` write path: `overlayOfficialIdentity()` in `identity.js` rewrites the
+  `deployment:persona-suffix` section to `CWD_ONLY_SUFFIX`, whose old value was `Your working directory is {{cwd}}.`,
+  which makes 0.2.1 prompt assembly throw `unknown prompt variable "{{cwd}}"`. It is a static sentence now; the old
+  value lives in `LEGACY_CWD_ONLY_SUFFIX` for state detection only.
+- Also updates the two `stripHarnessPersona()` replace targets, `ALLOW_EXEC_PERSONA_BLOCK/LINE`, and
+  `isDisposableYamlFoldParagraph()`.
+
 # 1.2.0
 
 ## 中文

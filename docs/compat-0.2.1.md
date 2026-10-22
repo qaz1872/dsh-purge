@@ -77,3 +77,60 @@ dsh-purge --apply
 ```
 
 回滚：`dsh-purge --revert`（沿用 `.bak`，不动用户自己的 patch 层）。
+
+## 部署：解包之后必须让 app.asar 让位
+
+桌面版的宿主代码在 `resources\app.asar` 里。补丁写进的是**解包目录** `resources\app`，
+而 Electron 的加载顺序是 `app.asar` 优先于 `app`。所以只解包、不挪走归档，等于补丁一份都没生效——
+现象是状态页看起来解包了、错误照旧。
+
+正确顺序：
+
+```powershell
+# 1) 让 dsh-purge 解包（插件设置页点「应用」）
+#    解包完成后 resources\app\dsh\package.json 应当存在
+
+# 2) 结束宿主、让归档让位、重新启动
+scripts\unseal-desktop.cmd "E:\DeepSeekHarness"
+```
+
+第 2 步做三件事：`taskkill` 掉宿主（否则 `app.asar` 被锁，改名必然失败）、把 `app.asar` 改名成
+`app.asar.bak`（已有 bak 则直接删除新归档）、再用 `NODE_EXTRA_CA_CERTS` 启动。
+
+校验：
+
+```powershell
+Test-Path 'E:\DeepSeekHarness\resources\app.asar'   # 期望 False
+Select-String -Path 'E:\DeepSeekHarness\resources\app\dsh\node_modules\@deepseek-ai\dsh-llm-deepseek\lib\index.js' -Pattern 'drop tool-change blocks'
+```
+
+第二行有命中，说明 #89 已经在生效路径里。
+
+**官方升级会重新封包**：DSH 更新后 `app.asar` 会回来，`app` 目录可能还在但不再被加载。升级后重跑一次
+第 2 步即可。
+
+回滚到官方封包状态：
+
+```powershell
+Remove-Item 'E:\DeepSeekHarness\resources\app' -Recurse -Force
+if (Test-Path 'E:\DeepSeekHarness\resources\app.asar.bak') { Move-Item 'E:\DeepSeekHarness\resources\app.asar.bak' 'E:\DeepSeekHarness\resources\app.asar' }
+```
+
+## 0.2.1-rc.2 上曾出现的三个 INVALID_REQUEST / 装配错误
+
+| 报错 | 根因 | 修法 |
+|---|---|---|
+| `unknown prompt variable "{{cwd}}" in section "deployment:persona-suffix"` | 配置层 + 运行时写入路径都塞了 `{{cwd}}`；0.2.1 的 `interpolate()` 只注册 provider/model | 1.2.0 改 `cordis.patch.yml`；1.2.1 改 `identity.js` 的 `CWD_ONLY_SUFFIX` 等 4 处 |
+| `messages.NNN: 'tool_addition' blocks can only be in 'system' messages` | 每次工具集变化都会生成增量块，服务端只收 system 位置 | 1.2.2 的 #89 直接不生成 |
+| `DeepSeek Messages transport failed`（重试 5 次后失败） | 本机 TLS 被安全软件重签，Node 不认其根证书 | 导出拦截根证书到 PEM，设 `NODE_EXTRA_CA_CERTS`（见下） |
+
+TLS 部分不属本插件职责，但同环境常见，记录命令：
+
+```powershell
+$ca = "$env:USERPROFILE\.dsh\certs\intercept-roots.pem"
+Get-ChildItem Cert:\LocalMachine\Root, Cert:\CurrentUser\Root |
+  Where-Object { $_.Subject -match 'Kaspersky|SteamTools|Steam\+\+' } |
+  ForEach-Object { '-----BEGIN CERTIFICATE-----'; [Convert]::ToBase64String($_.RawData,'InsertLineBreaks'); '-----END CERTIFICATE-----' } |
+  Set-Content $ca -Encoding ascii
+[Environment]::SetEnvironmentVariable('NODE_EXTRA_CA_CERTS', $ca, 'User')
+```
